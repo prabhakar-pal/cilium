@@ -316,6 +316,7 @@ integrations
 io
 ip
 ipcache
+ipmasq
 iproute
 ipsec
 iptables
@@ -386,6 +387,7 @@ loopback
 luke
 lwt
 macOS
+masq
 matchPattern
 mc
 mediabot
