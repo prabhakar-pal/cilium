@@ -12,6 +12,9 @@ pipeline {
         TESTED_SUITE="k8s-${K8S_VERSION}"
         GINKGO_TIMEOUT="300m"
         DEFAULT_KERNEL="419"
+        KERNEL = get_kernel("${DEFAULT_KERNEL}")
+        GOPATH="${WORKSPACE}/${TESTED_SUITE}-gopath"
+        TESTDIR="${GOPATH}/${PROJ_PATH}/test"
     }
 
     options {
@@ -105,10 +108,8 @@ pipeline {
             }
 
             environment {
-            FAILFAST=setIfLabel("ci/fail-fast", "true", "false")
-            CONTAINER_RUNTIME=setIfLabel("area/containerd", "containerd", "docker")
-                GOPATH="${WORKSPACE}/${TESTED_SUITE}-gopath"
-                TESTDIR="${GOPATH}/${PROJ_PATH}/test"
+                FAILFAST=setIfLabel("ci/fail-fast", "true", "false")
+                CONTAINER_RUNTIME=setIfLabel("area/containerd", "containerd", "docker")
                 KUBECONFIG="vagrant-kubeconfig"
             }
             steps {
@@ -117,7 +118,7 @@ pipeline {
                 retry(3) {
                     timeout(time: 45, unit: 'MINUTES'){
                         dir("${TESTDIR}") {
-                            sh 'KERNEL=$(python get-gh-comment-info.py ${ghprbCommentBody} --retrieve=version | sed "s/^$/${DEFAULT_KERNEL}/") CILIUM_REGISTRY="$(./print-node-ip.sh)" ./vagrant-ci-start.sh'
+                            sh 'CILIUM_REGISTRY="$(./print-node-ip.sh) KERNEL=${KERNEL}" ./vagrant-ci-start.sh'
                         }
                     }
                 }
@@ -137,10 +138,7 @@ pipeline {
                 timeout(time: 130, unit: 'MINUTES')
             }
             environment {
-                GOPATH="${WORKSPACE}/${TESTED_SUITE}-gopath"
-                TESTDIR="${GOPATH}/${PROJ_PATH}/test"
                 KUBECONFIG="${TESTDIR}/vagrant-kubeconfig"
-                K8S_VERSION="1.17"
                 FAILFAST=setIfLabel("ci/fail-fast", "true", "false")
                 CONTAINER_RUNTIME=setIfLabel("area/containerd", "containerd", "docker")
             }
@@ -175,3 +173,10 @@ pipeline {
         }
     }
 }
+
+def get_kernel(String default_kernel) {
+    dir("${TESTDIR}") {
+        sh(script: 'python get-gh-comment-info.py ${ghprbCommentBody} --retrieve=version | sed "s/^$/' + "${default_kernel}" + '/"', returnStdout: true)
+    }
+}
+
